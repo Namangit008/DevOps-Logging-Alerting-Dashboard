@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app/backend
+
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongo:/docker-entrypoint-initdb.d
+
+  loki:
+    image: grafana/loki:2.9.3
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:2.9.3
+    volumes:
+      - ./promtail/promtail-config.yaml:/etc/promtail/config.yaml
+      - ./backend:/app
+    command: -config.file=/etc/promtail/config.yaml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - loki
+
+  alertmanager:
+    image: prom/alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alerts:/etc/alertmanager
+
+volumes:
+  loki-data:
+  grafana-storage:
